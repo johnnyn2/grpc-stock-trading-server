@@ -1,8 +1,6 @@
 package com.example.grpc.service;
 
-import com.example.StockRequest;
-import com.example.StockResponse;
-import com.example.StockTradingServiceGrpc;
+import com.example.*;
 import com.example.grpc.entity.Stock;
 import com.example.grpc.repository.StockRepository;
 import io.grpc.stub.StreamObserver;
@@ -53,5 +51,38 @@ public class StockTradingServiceImpl extends StockTradingServiceGrpc.StockTradin
         } catch (Exception e) {
             responseObserver.onError(e);
         }
+    }
+
+    @Override
+    public StreamObserver<StockOrder> bulkStockOrder(StreamObserver<OrderSummary> responseObserver) {
+        return new StreamObserver<StockOrder>() {
+            private int totalOrders=0;
+            private double totalAmount=0;
+            private int successCount=0;
+
+            @Override
+            public void onNext(StockOrder stockOrder) {
+                totalOrders++;
+                totalAmount+=stockOrder.getPrice() * stockOrder.getQuantity();
+                successCount++;
+                System.out.println("Received Order: " + stockOrder);
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                System.out.println(throwable.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                OrderSummary orderSummary = OrderSummary.newBuilder()
+                        .setTotalOrders(totalOrders)
+                        .setTotalAmount(totalAmount)
+                        .setSuccessCount(successCount)
+                        .build();
+                responseObserver.onNext(orderSummary);
+                responseObserver.onCompleted();
+            }
+        };
     }
 }
